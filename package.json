@@ -1,0 +1,12 @@
+{
+  "name": "forceCRC32",
+  "description": "CRC-32 Code Forcer",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+  },
+  "repository": {
+    "type":"git",
+    "url":"https://github.com/ptdecker/forceCRC32.git"
+  }
+}

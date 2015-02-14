@@ -1,0 +1,1 @@
+This is a test file. The last four bytes of this file are changed to force a particular CRC value. XXXX
