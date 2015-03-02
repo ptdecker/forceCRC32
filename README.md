@@ -16,6 +16,13 @@ only deal with the lowest 32 bits of JavaScript's 54-bit integers. Since 40-bit 
 an augmented approach. To get us around this issue, this JavaScript implementation utilizes Daniel Wirtz's 'long.js' long class
 for representing 64-bit two's-complement integer values. See https://github.com/dcodeIO/Long.js
 
+## Files
+
+* 'forcecrc32.js' is the work-in-progress NodeJS JavaScript code being developed
+* 'testfile.txt' is a file to use for testing things
+* '\testscripts' contains a bunch of JavaScript test code to explore various parts, pieces, and libraries as I
+test things out.
+
 ## Port Questions
 
 1. Did I get Nayuki's 'getDegree()' properly translated?
