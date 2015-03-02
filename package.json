@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "long":"~2.2.x",
+    "crc":"~3.2.x"
   },
   "repository": {
     "type":"git",
