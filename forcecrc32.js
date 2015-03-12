@@ -59,7 +59,7 @@ function multiplyMod(x, y) {
     if(Long.isLong(x) && Long.isLong(y)) {
         var z = Long.ZERO;
         while (!y.isZero()) {
-            z.xor(y.and(Long.ONE).multiply(x));
+            z.xor(x.multiply(y.and(Long.ONE)));
             y.shiftRight(1);
             x.shiftLeft(1);
             if (!x.and(Long.ONE.shiftLeft(32)).isZero()) {
@@ -78,7 +78,7 @@ function powMod(x, y) {
         var z = Long.ONE;
         while (!y.isZero()) {
             if (!y.and(Long.ONE).isZero()) {
-                z = multiplyMod(x, y);
+                z = multiplyMod(z, x);
             }
             x = multiplyMod(x, x);
             y.shiftRight(1);
@@ -160,9 +160,7 @@ function reciprocalMod(x) {
 function main(file, offset, targetCRC32) {
 
     var fileSize,
-        chunk,
         value,
-        readStream,
         originalCRC,
         newCRC,
         delta;
@@ -173,6 +171,7 @@ function main(file, offset, targetCRC32) {
 
     /*jslint stupid:true */ // Tolerate 'stupid' use of synchronous file read
     fileSize = fs.statSync(file).size;
+    console.log("file is " + fileSize);
     /*jslint stupid:false */
 
     // Validate passed arguments
@@ -206,6 +205,7 @@ function main(file, offset, targetCRC32) {
     newCRC = reverseLowBits(newCRC);
     console.log('after ', newCRC.toString(2));
 
+
     console.log(file); // file to modify
     console.log(offset); // offset of bytes to change
     console.log(newCRC.toString(16)); // desired CRC-32 value
@@ -220,7 +220,7 @@ function main(file, offset, targetCRC32) {
     // Compute the change to make
     delta = originalCRC.xor(newCRC);
 
-    console.log("file size " + fileSize + " byte(s)");
+    console.log(powMod(new Long.fromInt(2), new Long.fromInt((fileSize - offset) * 8)));
 
     console.log("Delta: " + delta.toString(16));
 
