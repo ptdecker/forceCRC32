@@ -159,11 +159,21 @@ function reciprocalMod(x) {
 
 function main(file, offset, targetCRC32) {
 
-    var chunk,
+    var fileSize,
+        chunk,
         value,
-        readStream;
+        readStream,
+        originalCRC,
+        newCRC,
+        delta;
 
     console.log('hello', targetCRC32.toString(16));
+
+    // Get length of file to be modified
+
+    /*jslint stupid:true */ // Tolerate 'stupid' use of synchronous file read
+    fileSize = fs.statSync(file).size;
+    /*jslint stupid:false */
 
     // Validate passed arguments
 
@@ -180,37 +190,64 @@ function main(file, offset, targetCRC32) {
         return new Error("'forcecrc32': 'offset' argument is not a positive integer value (" + offset + ")");
     }
 
+    if ((offset + 4) > fileSize) {
+        return new Error("'forcecrc32': 'offset' plus four bytes " + (offset + 4) + " exceeds file length (" + fileSize + " byte(s))");
+    }
+
+    if (Long.isLong(targetCRC32)) {
+        newCRC = targetCRC32;
+    } else {
+        newCRC = new Long.fromString(targetCRC32, false, 16);
+    }
+
     // Reverse the bits in 'targetCRC32' to support big-endian bit endianness
 
-    console.log('before', targetCRC32.toString(2));
-    targetCRC32 = reverseLowBits(targetCRC32);
-    console.log('after ', targetCRC32.toString(2));
+    console.log('before', newCRC.toString(2));
+    newCRC = reverseLowBits(newCRC);
+    console.log('after ', newCRC.toString(2));
 
     console.log(file); // file to modify
     console.log(offset); // offset of bytes to change
-    console.log(targetCRC32.toString(16)); // desired CRC-32 value
+    console.log(newCRC.toString(16)); // desired CRC-32 value
 
-    // Start reading the stream
+    // Calculate original CRC-32 value
 
-    readStream = fs.createReadStream('testfile.txt');
+    /*jslint stupid:true */ // Tolerate 'stupid' use of synchronous file read
+    originalCRC = new Long.fromBits(crc.crc32(fs.readFileSync(file, 'utf8')), 0x00000000, true);
+    console.log("Original CRC-32: " + originalCRC.toString(16));
+    /*jslint stupid:false */
 
-    readStream
-        .on('readable', function () {
-            do {
-                chunk = readStream.read(4); // returns NodeJS buffer
-                if (chunk !== null) {
-                    value = Long.fromString(chunk.toString('hex'), false, 16);
-                    console.log(chunk.toString('hex'), value.toString(16));
-                }
-            } while (chunk !== null);
-        })
-        .on('end', function () {
-            console.log('done');
-        })
-        .on('error', function(err) {
-            console.log(err);
-            process.exit(1);
-        });
+    // Compute the change to make
+    delta = originalCRC.xor(newCRC);
+
+    console.log("file size " + fileSize + " byte(s)");
+
+    console.log("Delta: " + delta.toString(16));
+
+
+    /*
+        // Start reading the stream
+
+        readStream = fs.createReadStream('testfile.txt');
+
+        readStream
+            .on('readable', function () {
+                do {
+                    chunk = readStream.read(4); // returns NodeJS buffer
+                    if (chunk !== null) {
+                        value = Long.fromString(chunk.toString('hex'), false, 16);
+                        console.log(chunk.toString('hex'), value.toString(16));
+                    }
+                } while (chunk !== null);
+            })
+            .on('end', function () {
+                console.log('done');
+            })
+            .on('error', function(err) {
+                console.log(err);
+                process.exit(1);
+            });
+    */
 
 }
 
@@ -218,19 +255,13 @@ function main(file, offset, targetCRC32) {
 // Pass command line parameters to main process and handle any returned errors
 //
 
+var fileName    = process.argv[2],
+    offset      = parseInt(process.argv[3], 10),
+    targetCRC32 = process.argv[4],
+    err;
 
-var fileName = process.argv[2],
-    offset = parseInt(process.argv[3], 10),
-    targetCRC32 = Long.fromString(process.argv[4], false, 16);
-
-
-console.log(crc.crc32(fs.readFileSync(fileName, 'utf8')).toString(16));
-
-
-/*
-var err = main(fileName, offset, targetCRC32);
+err = main(fileName, offset, targetCRC32);
 if (err) {
     console.error(err.message);
     process.exit(1);
 }
-*/
