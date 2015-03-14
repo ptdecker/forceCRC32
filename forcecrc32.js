@@ -168,8 +168,8 @@ function main(file, offset, targetCRC32) {
         fileSize,
         originalCRC,
         newCRC,
-        delta,
-        i = 0;
+        completedCRC,
+        delta;
 
     console.log('hello', targetCRC32.toString(16));
 
@@ -264,6 +264,20 @@ function main(file, offset, targetCRC32) {
     writeStream
         .on('finish', function () {
             console.log('new file written');
+
+            // Recheck the patched file
+
+            /*jslint stupid:true */ // Tolerate 'stupid' use of synchronous file read
+            completedCRC = new Long.fromBits(crc.crc32(fs.readFileSync(file + ".new", 'utf8')), 0x00000000, true);
+            console.log("Final CRC-32: " + completedCRC.toString(16));
+            /*jslint stupid:false */
+
+            if (completedCRC.equals(targetCRC32)) {
+                console.log("New CRC-32 successfully verified");
+            } else {
+                console.log("Error: Failed to update CRC-32 to desired value");
+            }
+
         });
 
 }
