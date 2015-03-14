@@ -59,11 +59,11 @@ function multiplyMod(x, y) {
     if(Long.isLong(x) && Long.isLong(y)) {
         var z = Long.ZERO;
         while (!y.isZero()) {
-            z.xor(x.multiply(y.and(Long.ONE)));
-            y.shiftRight(1);
-            x.shiftLeft(1);
+            z = z.xor(x.multiply(y.and(Long.ONE)));
+            y = y.shiftRight(1);
+            x = x.shiftLeft(1);
             if (!x.and(Long.ONE.shiftLeft(32)).isZero()) {
-                x.xor(GEN_POLYNOMIAL);
+                x = x.xor(GEN_POLYNOMIAL);
             }
         }
         return z;
@@ -81,7 +81,7 @@ function powMod(x, y) {
                 z = multiplyMod(z, x);
             }
             x = multiplyMod(x, x);
-            y.shiftRight(1);
+            y = y.shiftRight(1);
         }
         return z;
     }
@@ -120,9 +120,9 @@ function divideAndRemainder(x, y) {
         var yDeg = getDegree(y),
             z = Long.ZERO,
             i;
-        for (i = (getDegree(x) - yDeg); i >= 0; i -= 0) {
-            x.xor(y.shiftLeft(i));
-            z.or(Long.ONE.shiftLeft(i));
+        for (i = (getDegree(x) - yDeg); i >= 0; i -= 1) {
+            x = x.xor(y.shiftLeft(i));
+            z = z.or(Long.ONE.shiftLeft(i));
         }
         return [z, x];
     }
@@ -139,8 +139,9 @@ function reciprocalMod(x) {
             a = Long.ZERO,
             b = Long.ONE,
             c,
-            y = new Long(x.getLowBitsUnsigned(), x.getHighBitsUnsigned());
-        x = new Long(GEN_POLYNOMIAL.getLowBitsUnsigned(), GEN_POLYNOMIAL.getHighBitsUnsigned());
+            y;
+        y = new Long.fromValue(x);
+        x = new Long.fromValue(GEN_POLYNOMIAL);
         while (!y.isZero()) {
             divRem = divideAndRemainder(x, y);
             c = a.xor(multiplyMod(divRem[0], b));
@@ -149,7 +150,7 @@ function reciprocalMod(x) {
             a = b;
             b = c;
         }
-        if (x === 1) {
+        if (x.equals(Long.ONE)) {
             return a;
         }
         return new Error("'reciprocalMod': Reciprocal does not exist");
@@ -159,11 +160,16 @@ function reciprocalMod(x) {
 
 function main(file, offset, targetCRC32) {
 
-    var fileSize,
+    var readStream,
+        writeStream,
+        chunk,
+        newChunk,
         value,
+        fileSize,
         originalCRC,
         newCRC,
-        delta;
+        delta,
+        i = 0;
 
     console.log('hello', targetCRC32.toString(16));
 
@@ -219,35 +225,46 @@ function main(file, offset, targetCRC32) {
 
     // Compute the change to make
     delta = originalCRC.xor(newCRC);
-
-    console.log(powMod(new Long.fromInt(2), new Long.fromInt((fileSize - offset) * 8)));
+    delta = multiplyMod(reciprocalMod(powMod(new Long.fromInt(2), new Long.fromInt((fileSize - offset) * 8))), delta.and(new Long(0xFFFFFFFF, 0x00000000)));
 
     console.log("Delta: " + delta.toString(16));
 
+    // Patch four bytes in the file with the delta
 
-    /*
-        // Start reading the stream
+    readStream = fs.createReadStream(file);
+    writeStream = fs.createWriteStream(file + ".new");
 
-        readStream = fs.createReadStream('testfile.txt');
-
-        readStream
-            .on('readable', function () {
-                do {
-                    chunk = readStream.read(4); // returns NodeJS buffer
-                    if (chunk !== null) {
-                        value = Long.fromString(chunk.toString('hex'), false, 16);
-                        console.log(chunk.toString('hex'), value.toString(16));
+    readStream
+        .on('readable', function () {
+            do {
+                chunk = readStream.read(1); // returns NodeJS buffer
+                if (chunk !== null) {
+                    value = Long.fromString(chunk.toString('hex'), false, 16);
+                    offset -= 1;
+                    if (offset >= 0) {
+                        newChunk = chunk;
+                    } else {
+                        newChunk = new Buffer("A", 'utf8');
                     }
-                } while (chunk !== null);
-            })
-            .on('end', function () {
-                console.log('done');
-            })
-            .on('error', function(err) {
-                console.log(err);
-                process.exit(1);
-            });
-    */
+
+                    console.log(chunk.toString('hex'), value.toString(16), newChunk, offset);
+                    writeStream.write(chunk);
+                }
+            } while (chunk !== null);
+        })
+        .on('end', function () {
+            console.log('done reading');
+            writeStream.end();
+        })
+        .on('error', function(err) {
+            console.log(err);
+            process.exit(1);
+        });
+
+    writeStream
+        .on('finish', function () {
+            console.log('new file written');
+        });
 
 }
 

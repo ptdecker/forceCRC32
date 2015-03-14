@@ -14,7 +14,8 @@ fractional portion is used to store integers. This results in '[maximum safe int
 2^53 - 1. While this is in theory enough to store the 40-bit generating function Nayuki uses, JavaScript's bitwise operators
 only deal with the lowest 32 bits of JavaScript's 54-bit integers. Since 40-bit generating function exceeds this, we need
 an augmented approach. To get us around this issue, this JavaScript implementation utilizes Daniel Wirtz's 'long.js' long class
-for representing 64-bit two's-complement integer values. See https://github.com/dcodeIO/Long.js
+for representing 64-bit two's-complement integer values. See [his GitHub repository] (https://github.com/dcodeIO/Long.js) for
+more information.
 
 ## Files
 
